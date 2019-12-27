@@ -1,0 +1,94 @@
+#!/bin/bash
+set -o errexit
+set -o nounset
+set -o pipefail
+
+function usage() {
+  cat <<EOS 1>&2
+Usage: $(basename $0) <COMMANDS>
+COMMANDS:
+    list
+    use <version>
+    install <version>
+EOS
+}
+
+function usage_short() {
+  echo "Usage: $(basename $0) $1" 1>&2
+}
+
+function log::message() {
+  echo "$1" 1>&2
+}
+
+function list() {
+  ls /usr/local/ | grep go..* | sed s/go//
+}
+
+function use() {
+  local -r version="${1}"
+  local -r target="/usr/local/go${version}"
+  local -r link_name="/usr/local/go"
+  
+  [[ ! -d ${target} ]] && log::message 'Please choose from the following' && list && exit 1
+  
+  sudo ln -sfn ${target} ${link_name}
+}
+
+function install() {
+  local -r version="${1}"
+  local -r target="/usr/local/go${version}"
+  
+  [[ -d ${target} ]] && log::message 'already exists' && exit 1
+  
+  local machine_arch=''
+  case "$(arch)" in
+    'x86_64') machine_arch='amd64' ;;
+    *) log::message "not support $(arch)"; exit 1 ;;
+  esac
+
+  work_dir='/tmp/gov'
+  mkdir -p "${work_dir}"
+  tar_file_name="go${version}.linux-${machine_arch}.tar.gz"
+  wget "https://dl.google.com/go/${tar_file_name}" -O "${work_dir}/${tar_file_name}"
+  tar -C "${work_dir}" -xzf "${work_dir}/${tar_file_name}"
+  sudo chown -R root:root "${work_dir}/go"
+  sudo mv "${work_dir}/go" "${target}"
+}
+
+
+while getopts 'h' opt; do
+  case "${opt}" in
+    h) usage; exit 0 ;;
+    \?) usage; exit 1 ;;
+  esac
+done
+shift $(($OPTIND - 1))
+
+if [[ $# -lt 1 ]]; then
+  usage
+  exit 1
+fi
+
+readonly CMD="$1"
+shift
+case "${CMD}" in
+  list)
+    list
+    exit 0
+    ;;
+  use)
+    [[ ! $# -eq 1 ]] && usage_short 'use <version>' && list && exit 0
+    use $1
+    exit 0
+    ;;
+  install)
+    [[ ! $# -eq 1 ]] && usage_short 'install <version>' && exit 0
+    install $1
+    exit 0
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac
