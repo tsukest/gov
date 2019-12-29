@@ -50,7 +50,7 @@ function install() {
   work_dir='/tmp/gov'
   mkdir -p "${work_dir}"
   tar_file_name="go${version}.linux-${machine_arch}.tar.gz"
-  wget "https://dl.google.com/go/${tar_file_name}" -O "${work_dir}/${tar_file_name}"
+  curl -o "${work_dir}/${tar_file_name}" "https://dl.google.com/go/${tar_file_name}"
   tar -C "${work_dir}" -xzf "${work_dir}/${tar_file_name}"
   sudo chown -R root:root "${work_dir}/go"
   sudo mv "${work_dir}/go" "${target}"
